@@ -1,32 +1,52 @@
-'Roma'
+========================================
+Twine
 
-Utilities for a widely dispersed replicated Redis cluster
+"a bundle of redis threads"
 
-Keywords: replication, cluster, partition, shard, sharding, Redis
+Utilities maintaining and querying a replicated
+ partitioned (shard) Redis cluster
+
+Formerly named 'Roma'
+========================================
 
 
-==========
+========================================
 Contents
-==========
+========================================
 
+* Quick Start
 * Poetic License
 * Introduction
 * Core utilities
-  o roma
-  o romad
-  o roma-setup
-  o roma-start
-  o roma-stop
-  o roma-status
-  o roma-hash
-  o roma-backup
-  o roma-restore
-* Roma Name
+  o twine
+  o twined
+  o twine-setup
+  o twine-start
+  o twine-stop
+  o twine-status
+  o twine-hash
+  o twine-backup
+  o twine-restore
+* Twine Name
 
 
-==========
+========================================
+Quick Start
+========================================
+
+$ git clone git://github.com/alexgenaud/twine.git
+$ cd twine
+$ wget http://redis.googlecode.com/files/redis-1.2.2.tar.gz
+$ bash twine-install-redis.sh
+$ bash twine-setup.sh
+$ bash twine-start.sh
+
+$ bash twine-stop.sh
+
+
+========================================
 Poetic License
-==========
+========================================
 
 (c) 2010 Alexander E Genaud
 
@@ -43,33 +63,33 @@ free or for profit.
 On this notice, these rights rely.
 
 
-==========
+========================================
 Introduction
-==========
+========================================
 
-Roma is a set of utilities that help query and maintain a replicated
+Twine is a set of utilities that help query and maintain a replicated
 partitioned (shared) Redis cluster. It handles start, stop, status,
 backup, restore, arbitrary queries, and includes a monitoring daemon
-(romad) which handles fail-over, periodic backups, and establishes
+(twined) which handles fail-over, periodic backups, and establishes
 the cluster status.
 
-The cluster has a single roma.conf configuration file which defines
+The cluster has a single twine.conf configuration file which defines
 the number of partitions and all of the nodes in the cluster.
-Roma.conf includes the hostname, port, database, and partition of
+twine.conf includes the hostname, port, database, and partition of
 every Redis node in the cluster.
 
 A node is a Redis instance which may be either a data node or a
 status node. Data nodes are bound to a single partition. A single
 master and any number of slaves are assigned 1-1 to a partition
 (modulo hash value). Data nodes are presumed to be dead until
-promoted to slave or master by a romad monitor. Romad broadcast
+promoted to slave or master by a twined monitor. Twined broadcast
 status to all status nodes. Clients and proxies are expected to poll
 the status nodes.
 
-Romad cluster monitoring daemons are responsible for assigning the
-status of data nodes as master, slave, or dead. Romad compete with
+Twined cluster monitoring daemons are responsible for assigning the
+status of data nodes as master, slave, or dead. Twined compete with
 each other for the role of alpha. The alpha is responsible for
-fail-over and reporting the cluster status. Other romad exist should
+fail-over and reporting the cluster status. Other twined exist should
 the alpha fail.
 
 The cluster is maintained by many small utilities. This allows, for
@@ -79,66 +99,69 @@ implemented in the core Redis runtime (which should continue to be
 back/forward compatible).
 
 
-==========
+========================================
 Core utilities
-==========
+========================================
 
-roma
+twine
   wraps redis-cli, but hashes the key
   and executes the command on the
   appropriate partition (shard)
 
-romad
+twined
   daemon (of which there may be many)
   which monitors the cluster. It
-  competes with any other romad for
+  competes with any other twined for
   alpha position. The alpha sets the
   cluster status and handles fail-over.
   It can be configured to send an email
   if the status is HALT or any Redis
   node is down for more than x seconds.
 
-roma-setup
+twine-setup
   creates the entire cluster plumbing
   including all partitions and redis.conf
-  according to the roma.conf. Ignores
+  according to the twine.conf. Ignores
   the hostname (results must be moved
   manually to other machines)
 
-roma-start
+twine-start
   starts the entire cluster according
-  to the roma.conf configuration file
+  to the twine.conf configuration file
   (must be run separately per machine)
 
-roma-stop
+twine-stop
   stops the entire cluster according
-  to the roma.conf configuration file
+  to the twine.conf configuration file
 
-roma-status
+twine-status
   returns the cluster status in various
   formats: summary, list, xml, html
 
-roma-hash
+twine-hash
   A plug-able hash function wrapper
   which accepts two arguments:
   a single 7-bit ASCII string (key)
   and a modulus (number of partitions).
   It returns the partition number.
 
-roma-backup
+twine-backup
   backs up the entire cluster to
-  directory(ies) according to roma.conf
+  directory(ies) according to twine.conf
 
-roma-restore
+twine-restore
   overwrites all cluster data from a
   previous backup.
 
 
-==========
-Roma Name
-==========
+========================================
+Twine Name
+========================================
 
-Why Roma? Well, it seems appropriate for two and a half reasons. The
-Redis' core developer, while not from Rome, is Italian. Roma refers
-to a people widely dispersed throughout the world, also known as
-Redis (plural Redi).
+Why Twine? Twine is a strong chord consisting of multiple threads.
+Twine is used to bind things together. Likewise Twine, the utility,
+helps bind a cluster of Redis threads.
+
+What about Roma? Well, within two hours of creating the public github
+repo, I was informed by two people that there was a distributed key-
+value store named Roma and the names might confuse people. I agreed.
