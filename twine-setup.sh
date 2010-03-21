@@ -1,8 +1,11 @@
-#~/bin/bash
+#!/bin/bash
 
 REDISVERSION=redis-1.2.5
 SERVERSUFFIX=redis-server-1.2.5
+MONIT_DAEMON_SEC=1
+REDIS_SAVE_SEC=10
 USE_HOST=$1
+APPENDONLY=no
 
 if [ $# -lt 1 ] ; then
   echo twine-setup all partitions for all hosts
@@ -79,7 +82,6 @@ cat twine.conf | while read -r LINE; do
     PART_PATH=partitions/$HOST/$NAME
     echo Creating $HOST/${NAME}-${SERVERSUFFIX}
     if [ -e $PART_PATH ]; then
-      rm -rf partitions
       echo =============================
       echo Error: $PART_PATH already exists
       echo =============================
@@ -90,30 +92,34 @@ cat twine.conf | while read -r LINE; do
     # create redis.conf file
     CONFIG=${PART_PATH}/redis.conf
     ln -s $PWD/$REDISVERSION/redis-server \
-          ${PART_PATH}/${NAME}-$SERVERSUFFIX
-    echo port $PORT            > $CONFIG
-    echo timeout 300          >> $CONFIG
-    echo dir ./               >> $CONFIG
-    echo loglevel notice      >> $CONFIG
-    echo logfile redis.log    >> $CONFIG
-    echo databases 1          >> $CONFIG
-    # Async Save
-    # after one minute if at least one key changed
-    echo save 60 1            >> $CONFIG
-    echo rdbcompression yes   >> $CONFIG
-    echo dbfilename dump.rdb  >> $CONFIG
-    echo dir ./               >> $CONFIG
-    # Journalled Save
-    echo appendonly no        >> $CONFIG
-    echo appendfsync everysec >> $CONFIG
-    echo glueoutputbuf yes    >> $CONFIG
-    echo shareobjects no      >> $CONFIG
+          ${PART_PATH}/${NAME}-${SERVERSUFFIX}
+    echo port $PORT              > $CONFIG
+    echo timeout 300            >> $CONFIG
+    echo dir ./                 >> $CONFIG
+    echo loglevel notice        >> $CONFIG
+    echo logfile redis.log      >> $CONFIG
+    echo databases 1            >> $CONFIG
+    if [ "_${APPENDONLY}" = "_yes" ]; then
+      # Journalled Save
+      echo appendonly yes       >> $CONFIG
+      echo appendfsync everysec >> $CONFIG
+    else
+      # Async Save
+      # after 5 seconds if at least one key changed
+      # echo save $REDIS_SAVE_SEC 1 >> $CONFIG
+      echo appendonly no        >> $CONFIG
+      echo rdbcompression yes   >> $CONFIG
+      echo dbfilename dump.rdb  >> $CONFIG
+    fi
+    echo dir ./                 >> $CONFIG
+    echo glueoutputbuf yes      >> $CONFIG
+    echo shareobjects no        >> $CONFIG
 
     # create start.sh file
     echo cd \"${PWD}/${PART_PATH}\" > ${PART_PATH}/start.sh
     echo echo -n Starting ${NAME}-${SERVERSUFFIX}\" \"  >> ${PART_PATH}/start.sh
-    echo ./${NAME}-$SERVERSUFFIX redis.conf 1\> access.log 2\> error.log \& >> ${PART_PATH}/start.sh
-    echo ps -ef \| grep \$\$ \| grep ${NAME}-$SERVERSUFFIX \| grep -v \$0 \| grep -v grep \| awk \'\{ print \$2 \}\' \> redis.pid >> ${PART_PATH}/start.sh
+    echo ./${NAME}-${SERVERSUFFIX} redis.conf 1\> access.log 2\> error.log \& >> ${PART_PATH}/start.sh
+    echo ps -ef \| grep \$\$ \| grep ${NAME}-${SERVERSUFFIX} \| grep -v \$0 \| grep -v grep \| awk \'\{ print \$2 \}\' \> redis.pid >> ${PART_PATH}/start.sh
     echo echo pid: \`cat redis.pid\` >> ${PART_PATH}/start.sh
 
     # create stop.sh file
@@ -121,6 +127,49 @@ cat twine.conf | while read -r LINE; do
     echo echo Stopping ${NAME}-${SERVERSUFFIX} pid: \`cat redis.pid\` >> ${PART_PATH}/stop.sh
     echo echo SHUTDOWN \| nc $HOST $PORT >> ${PART_PATH}/stop.sh
     echo rm -f redis.pid >> ${PART_PATH}/stop.sh
+
+    # create appendonly bg rewrite script
+    if [ "_$APPENDONLY" = "_yes" ]; then
+      # create appendonly save
+      AOFRC=partitions/$HOST/appendonly/appendonly.sh
+      if ! [ -r $AOFRC ]; then
+        mkdir -p partitions/$HOST/appendonly
+        echo \#!`which dash` > $AOFRC
+        echo echo \$\$ \> ${PWD}/partitions/$HOST/appendonly/appendonly.pid >> $AOFRC
+      fi
+      echo sleep $REDIS_SAVE_SEC                                        >> $AOFRC
+      echo ${PWD}/${REDISVERSION}/redis-cli -p $PORT Bgrewriteaof      >> $AOFRC
+    fi
+
+    # create monitrc
+    MONITRC=partitions/$HOST/monit/monitrc
+    if ! [ -r $MONITRC ]; then
+      mkdir -p partitions/$HOST/monit
+      echo set daemon $MONIT_DAEMON_SEC                                 > $MONITRC
+      echo set httpd port 4280                                         >> $MONITRC
+      echo allow localhost                                             >> $MONITRC
+      echo set logfile ${PWD}/partitions/${HOST}/monit/logfile         >> $MONITRC
+     #echo set mailserver localhost                                    >> $MONITRC
+     #echo set alert foo@bar.baz                                       >> $MONITRC
+      echo >> $MONITRC
+      echo check system localhost                                      >> $MONITRC
+      echo if loadavg \(1min\) \> 4 then alert                         >> $MONITRC
+      echo if loadavg \(5min\) \> 2 then alert                         >> $MONITRC
+      echo if memory usage \> 50% then alert                           >> $MONITRC
+      echo if cpu usage \(user\) \> 90% then alert                     >> $MONITRC
+      echo if cpu usage \(system\) \> 70% then alert                   >> $MONITRC
+      echo >> $MONITRC
+ 
+      chmod 700 $MONITRC
+    fi
+
+    echo check process ${NAME}                                         >> $MONITRC 
+    echo with pidfile \"${PWD}/${PART_PATH}/redis.pid\"                >> $MONITRC
+    echo start program = \"`which bash` ${PWD}/${PART_PATH}/start.sh\" >> $MONITRC
+    echo stop program = \"`which bash` ${PWD}/${PART_PATH}/stop.sh\"   >> $MONITRC
+    echo if failed host localhost port $PORT then restart              >> $MONITRC
+    echo if 5 restarts within 5 cycles then timeout                    >> $MONITRC
+    echo >> $MONITRC
 
   fi # data|status
 done

@@ -41,13 +41,13 @@ fi
 if [ ! $skip ]; then
 
   echo =============================
-  echo Installing gcc
+  echo Installing gcc and monit
   echo =============================
 
   if [ `uname -v | grep Ubuntu | wc -c` -gt 6 ]; then
-    sudo apt-get install gcc
+    sudo apt-get install gcc monit
   else # gross assumption yum, redhat, centos
-    yum install gcc
+    yum install gcc monit
   fi
 
 fi
