@@ -1,6 +1,6 @@
 #~/bin/bash
 
-REDISVERSION=redis-1.2.2
+REDISVERSION=redis-1.2.5
 CMD=
 KEY=
 VAL=

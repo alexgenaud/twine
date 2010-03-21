@@ -1,7 +1,6 @@
 #!/bin/sh
 
-# redisversion=redis-1.1.91-beta
-redisversion=redis-1.2.2
+redisversion=redis-1.2.5
 
 #
 # Check whether this version of redis is already installed
