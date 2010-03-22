@@ -39,11 +39,15 @@ Quick Start
 $ git clone git://github.com/alexgenaud/twine.git
 $ cd twine
 $ wget http://redis.googlecode.com/files/redis-1.2.5.tar.gz
-$ bash twine-install-redis.sh
+$ bash twine-install.sh
 $ bash twine-setup.sh localhost
-$ bash twine-start.sh
 
+$ bash twine-start.sh
+$ monit -c partitions/localhost/monit/monitrc
+
+$ monit -c partitions/localhost/monit/monitrc stop all
 $ bash twine-stop.sh
+$ monit -c partitions/localhost/monit/monitrc quit
 
 
 ========================================

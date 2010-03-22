@@ -22,9 +22,11 @@ fi
 
 cd partitions/${USE_HOST}
 for server in `find -mindepth 1 -maxdepth 1 -type d`; do
-  cd $server
-  sh start.sh
-  cd ..
+  if [ -r ${server}/start.sh ]; then
+    cd $server
+    sh start.sh
+    cd ..
+  fi
 done;
 cd ../..
 
