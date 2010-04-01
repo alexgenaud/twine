@@ -38,7 +38,6 @@ Quick Start
 
 $ git clone git://github.com/alexgenaud/twine.git
 $ cd twine
-$ wget http://redis.googlecode.com/files/redis-1.2.5.tar.gz
 $ bash twine-install.sh
 $ bash twine-setup.sh localhost
 

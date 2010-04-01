@@ -1,10 +1,10 @@
 #!/bin/bash
 
 if [ $# -lt 1 ]; then
-  echo usage twine-restore archive.zip
+  echo FAILURE: usage twine-restore archive.zip
   exit 1
 elif [ `unzip -t $1|grep "No errors detected"|wc -l` -ne 1 ]; then
-  echo usage twine-restore archive.zip
+  echo FAILURE: usage twine-restore archive.zip
   exit 1
 elif [ -r partitions ]; then
   mkdir -p backup

@@ -1,6 +1,6 @@
 #!/bin/bash
 
-SERVERSUFFIX=redis-server-1.2.5
+SERVERSUFFIX=redis-server-1.2.6
 USE_HOST=$1
 
 # if no arguments, then we must be sure

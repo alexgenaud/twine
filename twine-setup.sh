@@ -1,7 +1,7 @@
 #!/bin/bash
 
-REDISVERSION=redis-1.2.5
-SERVERSUFFIX=redis-server-1.2.5
+REDISVERSION=redis-1.2.6
+SERVERSUFFIX=redis-server-1.2.6
 MONIT_DAEMON_SEC=1
 REDIS_SAVE_SEC=10
 USE_HOST=$1
@@ -93,34 +93,41 @@ cat twine.conf | while read -r LINE; do
     CONFIG=${PART_PATH}/redis.conf
     ln -s $PWD/$REDISVERSION/redis-server \
           ${PART_PATH}/${NAME}-${SERVERSUFFIX}
-    echo port $PORT              > $CONFIG
-    echo timeout 300            >> $CONFIG
-    echo dir ./                 >> $CONFIG
-    echo loglevel notice        >> $CONFIG
-    echo logfile redis.log      >> $CONFIG
-    echo databases 1            >> $CONFIG
+    echo daemonize yes                          > $CONFIG
+    echo pidfile ${PWD}/${PART_PATH}/redis.pid >> $CONFIG
+    echo port $PORT                            >> $CONFIG
+    echo timeout 300                           >> $CONFIG
+    echo loglevel notice                       >> $CONFIG
+    echo logfile redis.log                     >> $CONFIG
+    echo databases 1                           >> $CONFIG
     if [ "_${APPENDONLY}" = "_yes" ]; then
       # Journalled Save
-      echo appendonly yes       >> $CONFIG
-      echo appendfsync everysec >> $CONFIG
+      echo appendonly yes                      >> $CONFIG
+      echo appendfsync everysec                >> $CONFIG
     else
       # Async Save
       # after 5 seconds if at least one key changed
       # echo save $REDIS_SAVE_SEC 1 >> $CONFIG
-      echo appendonly no        >> $CONFIG
-      echo rdbcompression yes   >> $CONFIG
-      echo dbfilename dump.rdb  >> $CONFIG
+      echo save 1 1                            >> $CONFIG
+      echo appendonly no                       >> $CONFIG
+      echo rdbcompression yes                  >> $CONFIG
+      echo dbfilename dump.rdb                 >> $CONFIG
     fi
-    echo dir ./                 >> $CONFIG
-    echo glueoutputbuf yes      >> $CONFIG
-    echo shareobjects no        >> $CONFIG
+    echo dir ./                                >> $CONFIG
+    echo glueoutputbuf yes                     >> $CONFIG
+    echo shareobjects no                       >> $CONFIG
 
     # create start.sh file
     echo cd \"${PWD}/${PART_PATH}\" > ${PART_PATH}/start.sh
     echo echo -n Starting ${NAME}-${SERVERSUFFIX}\" \"  >> ${PART_PATH}/start.sh
     echo ./${NAME}-${SERVERSUFFIX} redis.conf 1\> access.log 2\> error.log \& >> ${PART_PATH}/start.sh
-    echo ps -ef \| grep \$\$ \| grep ${NAME}-${SERVERSUFFIX} \| grep -v \$0 \| grep -v grep \| awk \'\{ print \$2 \}\' \> redis.pid >> ${PART_PATH}/start.sh
-    echo echo pid: \`cat redis.pid\` >> ${PART_PATH}/start.sh
+    # echo ps -ef\|grep \$\$\|grep ${NAME}-${SERVERSUFFIX}\|grep -v \$0\|awk \'{ print \$2 }\' \> redis.pid >> ${PART_PATH}/start.sh
+    # echo if ! [ -r redis.pid ]\; then sleep 1    >> ${PART_PATH}/start.sh
+    # echo elif ! [ -r redis.pid ]\; then sleep 3  >> ${PART_PATH}/start.sh
+    # echo elif ! [ -r redis.pid ]\; then sleep 10 >> ${PART_PATH}/start.sh
+    # echo fi                                      >> ${PART_PATH}/start.sh
+    echo echo pid: \`cat redis.pid\`            >> ${PART_PATH}/start.sh
+
 
     # create stop.sh file
     echo cd \"${PWD}/${PART_PATH}\" > ${PART_PATH}/stop.sh
